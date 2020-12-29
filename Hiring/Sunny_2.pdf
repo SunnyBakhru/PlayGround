@@ -1,0 +1,434 @@
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.Finahub.Entity.BankInfoBO;
+import com.example.Finahub.Entity.bankInfo;
+import com.example.Finahub.Service.BankInfoService;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+@RestController
+@RequestMapping("/funbro")
+@CrossOrigin("*")
+public class BankInfoController {
+	
+	
+	@Autowired
+	BankInfoService bankInfoService;
+	
+	@GetMapping
+	public ResponseEntity<?> getBankInfo() throws URISyntaxException, IOException {
+		URL url = new URL("https://api.airtable.com/v0/appL8W9qlf8sORhe6/Table%201?maxRecords=10&view=Grid%20view");
+		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+		connection.setRequestProperty("Authorization", "Bearer keyTtHGzT69Rb3bO5");
+		connection.setRequestProperty("accept", "application/json");
+		InputStream responseStream = connection.getInputStream();
+		ObjectMapper mapper = new ObjectMapper();
+		List<BankInfoBO> bankInfoBoList = new ArrayList<BankInfoBO>();
+		HashMap apod = mapper.readValue(responseStream, HashMap.class);
+		Iterator<Map.Entry<Object, Object>> itr = apod.entrySet().iterator();
+		while (itr.hasNext()) {
+			Map.Entry<Object, Object> entry = itr.next();
+			List<HashMap> list = new ArrayList<HashMap>();
+			list = (List<HashMap>) entry.getValue();
+
+			for (HashMap myObj : list) {
+				BankInfoBO bankInfoBO = new BankInfoBO();
+				Map<String, Object> myMap = (Map<String, Object>) myObj.get("fields");
+				bankInfoBO.setBank((String) myMap.get("Bank"));
+				bankInfoBO.setCreditCardCount((Integer) myMap.get("Credit Card Count"));
+				bankInfoBO.setDebitCardAccount((Integer) myMap.get("Debit Card Count"));
+				bankInfoBoList.add(bankInfoBO);
+
+			}
+
+		}
+		System.out.println(connection.toString());
+
+		return ResponseEntity.ok(bankInfoBoList);
+
+	}
+
+	@PostMapping
+	public void addBankInfo(@RequestBody List<BankInfoBO> bankInfoBO ) throws SQLException {
+		
+		bankInfoService.addBankInfo(bankInfoBO);
+		
+	}
+
+}
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+package com.example.Finahub.DAO;
+
+import java.sql.SQLException;
+import java.util.List;
+
+import com.example.Finahub.Entity.BankInfoBO;
+
+public interface BankInfoDAO {
+	
+	public void addBankInfo(List<BankInfoBO> bankInfoBO) throws SQLException;
+
+}
+-------------------------------------------------------------------------------------------
+
+
+package com.example.Finahub.DAO;
+
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.List;
+
+import javax.sql.DataSource;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
+import com.example.Finahub.Entity.BankInfoBO;
+@Repository
+public class BankInfoDAOImp implements BankInfoDAO {
+
+	@Autowired
+	DataSource dataSource ;
+	
+	@Override
+	public void addBankInfo(List<BankInfoBO> bankInfoBO) throws SQLException {
+		Connection connection = null;
+		Statement statement = null;
+		int resultSet = 0;
+		try {
+			for (BankInfoBO bInfoBO : bankInfoBO) {
+
+				String Qery = "insert into bankInfo(Bank,Credit,Debit) values('" + bInfoBO.getBank() + "' ,"
+						+ bInfoBO.getCreditCardCount() + " ," + bInfoBO.getDebitCardAccount() + ")";
+				System.out.println(Qery);
+				connection = dataSource.getConnection();
+				statement = connection.createStatement();
+				resultSet = statement.executeUpdate(Qery);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} finally {
+			connection.close();
+			statement.close();
+		}
+	}
+
+	}
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+package com.example.Finahub.Entity;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+@Entity
+@Table
+public class bankInfo {
+	@Id
+	@Column(name = "id")
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private int id;
+
+	@Column(name = "Bank")
+	private String bank;
+
+	@Column(name = "Credit")
+	private int creditCardCount;
+
+	@Column(name = "Debit")
+	private int debitCardAccount;
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public String getBank() {
+		return bank;
+	}
+
+	public void setBank(String bank) {
+		this.bank = bank;
+	}
+
+	public int getCreditCardCount() {
+		return creditCardCount;
+	}
+
+	public void setCreditCardCount(int creditCardCount) {
+		this.creditCardCount = creditCardCount;
+	}
+
+	public int getDebitCardAccount() {
+		return debitCardAccount;
+	}
+
+	public void setDebitCardAccount(int debitCardAccount) {
+		this.debitCardAccount = debitCardAccount;
+	}
+
+	
+
+}
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+package com.example.Finahub.Entity;
+
+public class BankInfoBO {
+	
+	private String bank;
+	
+	private Integer creditCardCount;
+	            
+	
+	private Integer debitCardAccount;
+
+
+	public String getBank() {
+		return bank;
+	}
+
+
+	public void setBank(String bank) {
+		this.bank = bank;
+	}
+
+
+	public Integer getCreditCardCount() {
+		return creditCardCount;
+	}
+
+
+	public void setCreditCardCount(Integer creditCardCount) {
+		this.creditCardCount = creditCardCount;
+	}
+
+
+	public Integer getDebitCardAccount() {
+		return debitCardAccount;
+	}
+
+
+	public void setDebitCardAccount(Integer debitCardAccount) {
+		this.debitCardAccount = debitCardAccount;
+	}
+
+	
+
+}
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+package com.example.Finahub.Service;
+
+import java.sql.SQLException;
+import java.util.List;
+
+import com.example.Finahub.Entity.BankInfoBO;
+
+public interface BankInfoService {
+	
+public	void addBankInfo(List<BankInfoBO> bankInfoBO) throws SQLException;
+
+}
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+package com.example.Finahub.Service;
+
+import java.sql.SQLException;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.example.Finahub.DAO.BankInfoDAO;
+import com.example.Finahub.Entity.BankInfoBO;
+
+
+@Service
+public class BankInfoServiceImp implements BankInfoService{
+
+	@Autowired
+	BankInfoDAO bankInfoDAO;
+	
+	@Override
+	public void addBankInfo(List<BankInfoBO> bankInfoBO) throws SQLException {
+		
+		bankInfoDAO.addBankInfo(bankInfoBO);
+	}
+
+}
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+export interface BnakInfo{
+  Bank?:string;
+  CreditCardCount?:Number;
+  DebitCardAccount?:Number
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class BooksService {
+
+  constructor(private http: HttpClient) { }
+  
+
+  
+
+    getBankInfo(){
+      const url = 'http://localhost:8080/funbro';
+      return this.http.get(`${url}`);
+    }
+
+    addBankInfo(BnakInfo ){
+      const url = 'http://localhost:8080/funbro';
+      return this.http.post(`${url}`, BnakInfo);
+    }
+}
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+export interface BnakInfo{
+  bank?:string;
+  creditCardCount?:Number;
+  debitCardAccount?:Number
+}
+
+@Component({
+  selector: 'app-book-data',
+  templateUrl: './book-data.component.html',
+  styleUrls: ['./book-data.component.css']
+})
+export class BookDataComponent implements OnInit {
+ 
+  bankInfo:BnakInfo={};
+  cols: any[];
+
+ 
+ 
+  
+  constructor(private bookService: BooksService,private excelService :ExcelService) { }
+ 
+  
+
+  ngOnInit(): void {
+     
+     
+    this.cols = [
+      { field: 'bank', header: 'Bank' },
+      {field: 'creditCardCount', header: 'Credit Card Count' },
+      { field: 'debitCardAccount', header: 'Debit Card Count' }    
+      
+  ];
+ 
+    
+  }
+ 
+
+ 
+
+
+getBankInfo(){
+  this.bookService.getBankInfo()
+  .subscribe((data:any)=>{
+   this.bankInfo=data;
+  })
+}
+addBankInfo(){
+ 
+  this.bookService.addBankInfo( this.bankInfo)
+  .subscribe( response =>this.handleRespose(response) );
+
+  }
+  handleRespose(response)
+  {
+      
+       
+        alert("info added successfully!!");
+     
+  }    
+}
+
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+
+  
+ <div>
+ <button (click)="getBankInfo()" class="w3-btn w3-teal" >Get Data</button>
+ </div>
+<br>
+ <div>
+  <button (click)="addBankInfo()" class="w3-btn w3-teal" >Store Data</button>
+  </div>
+
+
+
+
+
+<p-table [value]="bankInfo" [paginator]="true" [rows]="5" tableStyleClass="tablep">
+  <ng-template pTemplate="header">
+    <tr>
+      <th *ngFor="let col of cols">
+        {{col.header}}
+      </th>
+    </tr>
+  </ng-template>
+  <ng-template pTemplate="body" let-rowData>
+    <tr>
+      <td *ngFor="let col of cols ">
+        {{rowData[col.field]}}
+      </td>
+    </tr>
+  </ng-template>
+</p-table>
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

@@ -28,3 +28,6 @@ If we accept the code, we will call you for a technical interview.
 
 ## Questions
 If you have any questions or doubts, feel free to get in touch with us at hr@finahub.com
+
+
+in Angular side , need to install dependencies like npm i only and URL is => http://localhost:4200/BankInfo
